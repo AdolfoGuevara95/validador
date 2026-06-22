@@ -5,81 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Validador de Facturas - Gasolinera Don Héctor</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .container { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 450px; padding: 30px; text-align: center; box-sizing: border-box; }
-    .logo { font-weight: bold; font-size: 20px; color: #1e293b; margin-bottom: 20px; text-transform: uppercase; }
-    .badge { display: inline-block; padding: 12px 24px; border-radius: 50px; font-weight: bold; font-size: 18px; margin-bottom: 25px; }
-    .badge.success { background-color: #d1fae5; color: #065f46; border: 2px solid #34d399; }
-    .badge.error { background-color: #fee2e2; color: #991b1b; border: 2px solid #f87171; }
-    .badge.loading { background-color: #e2e8f0; color: #475569; }
-    .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; display: none; }
-    .data-table th, .data-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; }
-    .data-table th { color: #64748b; font-weight: 600; width: 40%; }
-    .data-table td { color: #334155; font-weight: bold; }
-    .footer { margin-top: 30px; font-size: 12px; color: #94a3b8; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #f4f6f9; }
+    iframe { width: 100%; height: 100%; border: none; }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="logo">Gasolinera Don Héctor</div>
-    
-    <div id="statusBadge" class="badge loading">⏳ CONSULTANDO DATOS...</div>
-    <p id="errorMessage" style="color: #475569; font-size: 14px; display: none;"></p>
-    
-    <table id="facturaData" class="data-table">
-      <tr><th>ID Recibo:</th><td id="resId"></td></tr>
-      <tr><th>RTN Cliente:</th><td id="resRtn"></td></tr>
-      <tr><th>Fecha:</th><td id="resFecha"></td></tr>
-      <tr><th>Hora:</th><td id="resHora"></td></tr>
-    </table>
-
-    <div class="footer">
-      Sistema de Verificación Digital Oficial<br>
-      © 2026 Gasolinera Don Héctor.
-    </div>
-  </div>
-
   <script>
-    // 1. Obtener el ID de la URL
+    // 1. Capturar el ID de la factura desde el subdominio
     const urlParams = new URLSearchParams(window.location.search);
-    const idFactura = urlParams.get('id');
-    const badge = document.getElementById('statusBadge');
+    const idFactura = urlParams.get('id') || '';
 
-    if (!idFactura) {
-      badge.className = "badge error";
-      badge.innerText = "❌ ERROR";
-      document.getElementById('errorMessage').innerText = "No se proporcionó un código de factura.";
-      document.getElementById('errorMessage').style.display = "block";
-    } else {
-      // 2. Tu URL de Google Script (Cambiamos /exec por la petición de datos)
-      const urlScript = `https://script.google.com/macros/s/AKfycbz_tfIjl1ZaBUTdlzUuOqjCAcDpnrruBwcDHQgz6PAwTmdZZbWRtXKAr86MR3yX8uOb/exec?id=${idFactura}`;
+    // 2. Dirección base de tu Google Apps Script
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbz_tfIjl1ZaBUTdlzUuOqjCAcDpnrruBwcDHQgz6PAwTmdZZbWRtXKAr86MR3yX8uOb/exec";
 
-      fetch(urlScript)
-        .then(response => response.json())
-        .then(data => {
-          if (data.resultado === "VALIDA") {
-            badge.className = "badge success";
-            badge.innerText = "✅ FACTURA VÁLIDA";
-            
-            document.getElementById('resId').innerText = data.id;
-            document.getElementById('resRtn').innerText = data.rtn;
-            document.getElementById('resFecha').innerText = data.fecha;
-            document.getElementById('resHora').innerText = data.hora;
-            document.getElementById('facturaData').style.display = "table";
-          } else {
-            badge.className = "badge error";
-            badge.innerText = "❌ FACTURA INVÁLIDA";
-            document.getElementById('errorMessage').innerText = data.mensaje;
-            document.getElementById('errorMessage').style.display = "block";
-          }
-        })
-        .catch(error => {
-          badge.className = "badge error";
-          badge.innerText = "❌ ERROR DE CONEXIÓN";
-          console.error(error);
-        });
-    }
+    // 3. Crear el marco invisible que renderiza el diseño controlado desde Google Script
+    const iframe = document.createElement('iframe');
+    iframe.src = scriptUrl;
+    document.body.appendChild(iframe);
+
+    // 4. Una vez que el diseño estético de Google Script carga, le inyectamos los datos reales del Excel
+    iframe.onload = function() {
+      if(idFactura) {
+        fetch(`${scriptUrl}?action=getData&id=${idFactura}`)
+          .then(response => response.json())
+          .then(data => {
+            // Ejecuta la función de pintado que guardamos en el Index.html de Google Script
+            iframe.contentWindow.inicializarVerificacion(data);
+          })
+          .catch(err => console.error("Error al obtener datos:", err));
+      } else {
+        iframe.contentWindow.inicializarVerificacion({resultado: "INVALIDA", mensaje: "No se proporcionó un código de factura."});
+      }
+    };
   </script>
 </body>
 </html>
