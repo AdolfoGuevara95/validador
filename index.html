@@ -19,25 +19,10 @@
     // 2. Dirección base de tu Google Apps Script
     const scriptUrl = "https://script.google.com/macros/s/AKfycbz_tfIjl1ZaBUTdlzUuOqjCAcDpnrruBwcDHQgz6PAwTmdZZbWRtXKAr86MR3yX8uOb/exec";
 
-    // 3. Crear el marco invisible que renderiza el diseño controlado desde Google Script
+    // 3. Crear el marco que renderiza la web controlada desde Google Script pasando el ID directamente
     const iframe = document.createElement('iframe');
-    iframe.src = scriptUrl;
+    iframe.src = idFactura ? `${scriptUrl}?id=${idFactura}` : scriptUrl;
     document.body.appendChild(iframe);
-
-    // 4. Una vez que el diseño estético de Google Script carga, le inyectamos los datos reales del Excel
-    iframe.onload = function() {
-      if(idFactura) {
-        fetch(`${scriptUrl}?action=getData&id=${idFactura}`)
-          .then(response => response.json())
-          .then(data => {
-            // Ejecuta la función de pintado que guardamos en el Index.html de Google Script
-            iframe.contentWindow.inicializarVerificacion(data);
-          })
-          .catch(err => console.error("Error al obtener datos:", err));
-      } else {
-        iframe.contentWindow.inicializarVerificacion({resultado: "INVALIDA", mensaje: "No se proporcionó un código de factura."});
-      }
-    };
   </script>
 </body>
 </html>
